@@ -1,0 +1,19 @@
+[project]
+name = "kinosail-home-assistant"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = ["aiohttp>=3.12"]
+
+[project.optional-dependencies]
+test = ["pytest>=8", "pytest-asyncio>=1", "ruff>=0.12"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]

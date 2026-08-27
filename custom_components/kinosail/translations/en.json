@@ -1,0 +1,32 @@
+{
+  "title": "Kinosail",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect Kinosail",
+        "description": "Enable Home Assistant in Kinosail Settings, create a one-time pairing code, then enter the local Server address and code here.",
+        "data": {
+          "url": "Kinosail Server URL",
+          "code": "One-time pairing code",
+          "verify_ssl": "Verify the Server certificate"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Reconnect Kinosail",
+        "description": "Create a new one-time pairing code in Kinosail Settings, then enter it here.",
+        "data": {
+          "url": "Kinosail Server URL",
+          "code": "One-time pairing code",
+          "verify_ssl": "Verify the Server certificate"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not pair with Kinosail. Check the address, certificate, and one-time code.",
+      "disabled": "Home Assistant is disabled in Kinosail Settings."
+    },
+    "abort": {
+      "already_configured": "This Kinosail Server is already connected."
+    }
+  }
+}

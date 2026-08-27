@@ -1,0 +1,12 @@
+{
+  "domain": "kinosail",
+  "name": "Kinosail",
+  "codeowners": ["@MikeO7"],
+  "config_flow": true,
+  "documentation": "https://github.com/MikeO7/Kinosail-Home-Assistant",
+  "integration_type": "hub",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/MikeO7/Kinosail-Home-Assistant/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}
