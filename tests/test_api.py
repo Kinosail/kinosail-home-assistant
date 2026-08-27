@@ -103,6 +103,27 @@ async def test_pairing_and_direct_playback_contract() -> None:
 
 
 @pytest.mark.asyncio
+async def test_oauth_token_exchange_uses_form_data_without_authentication() -> None:
+    session = Session(Response(200, {"access_token": "ks_secret", "serverId": "server", "name": "Kinosail"}))
+    client = KinosailClient(session, "https://media.example")
+    form = {
+        "grant_type": "authorization_code",
+        "client_id": "home-assistant",
+        "code": "one-use-code",
+        "redirect_uri": "https://my.home-assistant.io/redirect/oauth",
+        "code_verifier": "v" * 64,
+    }
+    assert (await client.oauth_token(form))["access_token"] == "ks_secret"
+    assert session.calls == [
+        (
+            "POST",
+            "https://media.example/api/v1/home-assistant/token",
+            {"json": None, "data": form, "params": None, "headers": {}, "ssl": True},
+        )
+    ]
+
+
+@pytest.mark.asyncio
 async def test_disabled_and_revoked_are_distinct() -> None:
     with pytest.raises(KinosailDisabledError):
         await KinosailClient(Session(Response(404, {})), "https://media.example").probe()

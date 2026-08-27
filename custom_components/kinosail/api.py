@@ -56,6 +56,7 @@ class KinosailClient:
         path: str,
         *,
         json: dict[str, Any] | None = None,
+        data: dict[str, Any] | None = None,
         params: dict[str, Any] | None = None,
         authenticated: bool = True,
     ) -> dict[str, Any]:
@@ -66,6 +67,7 @@ class KinosailClient:
                 method,
                 urljoin(self.base_url + "/", path.lstrip("/")),
                 json=json,
+                data=data,
                 params=params,
                 headers=headers,
                 ssl=self.verify_ssl,
@@ -100,6 +102,10 @@ class KinosailClient:
         return await self.request(
             "POST", "/api/v1/home-assistant/pair", json={"code": code, "name": name}, authenticated=False
         )
+
+    async def oauth_token(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Exchange one browser-approved authorization code."""
+        return await self.request("POST", "/api/v1/home-assistant/token", data=data, authenticated=False)
 
     async def players(self) -> list[dict[str, Any]]:
         data = await self.request("GET", "/api/v1/home-assistant/players")
