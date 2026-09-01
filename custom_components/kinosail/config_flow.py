@@ -75,7 +75,7 @@ class KinosailConfigFlow(config_entry_oauth2_flow.AbstractOAuth2FlowHandler, dom
             {
                 vol.Required(CONF_URL, default=default_url): str,
                 vol.Required(CONF_VERIFY_SSL, default=default_verify_ssl): bool,
-                vol.Optional(CONF_CODE, default=""): vol.Any("", vol.All(str, vol.Length(min=8, max=8))),
+                vol.Optional(CONF_CODE, default=""): str,
             }
         )
 

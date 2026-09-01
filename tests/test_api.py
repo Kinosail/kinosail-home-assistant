@@ -145,9 +145,6 @@ async def test_remote_ids_and_cardinality_are_bounded_before_use() -> None:
         await client.playback("../settings")
     with pytest.raises(KinosailError, match="player ID"):
         await client.command("../settings", "pause")
-    with pytest.raises(KinosailError, match="pairing"):
-        await client.pair("１２３４５６７８", "Home Assistant")
-
     players = KinosailClient(
         Session(Response(200, {"players": [{"id": f"player-{index}"} for index in range(api.MAX_PLAYERS + 1)]})),
         "https://media.example",
@@ -163,3 +160,12 @@ async def test_remote_ids_and_cardinality_are_bounded_before_use() -> None:
     )
     with pytest.raises(KinosailError, match="invalid library"):
         await library.library()
+
+
+@pytest.mark.parametrize("code", ["", "1234567", "123456789", "abcdefgh", "１２３４５６７８"])
+@pytest.mark.asyncio
+async def test_pairing_rejects_invalid_codes_without_a_request(code: str) -> None:
+    session = Session()
+    with pytest.raises(KinosailError, match="pairing"):
+        await KinosailClient(session, "https://media.example").pair(code, "Home Assistant")
+    assert session.calls == []
