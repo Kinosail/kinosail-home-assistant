@@ -65,6 +65,11 @@ class Session:
         "https://user:pass@server",
         "https://server/path",
         "https://server/?token=x",
+        "http://server:",
+        "http://server:0",
+        "http://server:65536",
+        "http://server:abc",
+        "http://server:1.5",
         "x" * 2049,
     ],
 )

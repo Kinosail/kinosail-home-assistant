@@ -38,6 +38,14 @@ def normalize_url(value: str) -> str:
         raise ValueError("invalid URL")
     if parsed.path not in {"", "/"}:
         raise ValueError("invalid URL")
+    if parsed.netloc.endswith(":"):
+        raise ValueError("invalid URL")
+    try:
+        port = parsed.port
+    except ValueError as err:
+        raise ValueError("invalid URL") from err
+    if port is not None and not 1 <= port <= 65535:
+        raise ValueError("invalid URL")
     return urlunsplit((parsed.scheme, parsed.netloc, "", "", "")).rstrip("/")
 
 

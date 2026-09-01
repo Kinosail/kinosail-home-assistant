@@ -32,7 +32,8 @@
     "abort": {
       "already_configured": "This Kinosail Server is already connected.",
       "disabled": "Home Assistant is disabled in Kinosail Settings.",
-      "invalid_discovery": "The discovered Kinosail Server sent invalid connection details."
+      "invalid_discovery": "The discovered Kinosail Server sent invalid connection details.",
+      "oauth_failed": "Kinosail approval failed. Try connecting again or use a new one-time code."
     }
   }
 }
