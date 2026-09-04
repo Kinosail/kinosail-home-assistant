@@ -23,6 +23,14 @@
           "code": "One-time pairing code (optional fallback)",
           "verify_ssl": "Verify the Server certificate"
         }
+      },
+      "reconfigure": {
+        "title": "Update Kinosail Server",
+        "description": "Change this connection address or certificate setting. The new address must identify the same Kinosail Server.",
+        "data": {
+          "url": "Kinosail Server URL",
+          "verify_ssl": "Verify the Server certificate"
+        }
       }
     },
     "error": {

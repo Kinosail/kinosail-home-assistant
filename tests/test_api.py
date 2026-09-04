@@ -167,6 +167,55 @@ async def test_remote_ids_and_cardinality_are_bounded_before_use() -> None:
         await library.library()
 
 
+@pytest.mark.parametrize(
+    ("command", "values"),
+    [
+        ("unknown", {}),
+        ("play", {"position": 1}),
+        ("seek", {}),
+        ("seek", {"position": -1}),
+        ("seek", {"position": True}),
+        ("volume", {"volume": 1.1}),
+        ("mute", {"muted": "yes"}),
+        ("play_media", {"itemId": 1}),
+        ("play_media", {"itemId": "../settings"}),
+    ],
+)
+@pytest.mark.asyncio
+async def test_commands_reject_invalid_values_without_a_request(command: str, values: dict) -> None:
+    session = Session()
+    with pytest.raises(KinosailError, match="command"):
+        await KinosailClient(session, "https://media.example", "ks_secret").command("player", command, **values)
+    assert session.calls == []
+
+
+@pytest.mark.parametrize(
+    ("command", "values"),
+    [
+        ("play", {}),
+        ("pause", {}),
+        ("stop", {}),
+        ("seek", {"position": 12.5}),
+        ("volume", {"volume": 0.5}),
+        ("mute", {"muted": True}),
+        ("play_media", {"itemId": "movie_1"}),
+    ],
+)
+@pytest.mark.asyncio
+async def test_commands_send_only_validated_values(command: str, values: dict) -> None:
+    session = Session(Response(202, {"status": "queued"}))
+    await KinosailClient(session, "https://media.example", "ks_secret").command("player", command, **values)
+    assert session.calls[0][2]["json"] == {"command": command, **values}
+
+
+@pytest.mark.asyncio
+async def test_library_rejects_oversized_query_without_a_request() -> None:
+    session = Session()
+    with pytest.raises(KinosailError, match="query"):
+        await KinosailClient(session, "https://media.example", "ks_secret").library("x" * 513)
+    assert session.calls == []
+
+
 @pytest.mark.parametrize("code", ["", "1234567", "123456789", "abcdefgh", "１２３４５６７８"])
 @pytest.mark.asyncio
 async def test_pairing_rejects_invalid_codes_without_a_request(code: str) -> None:

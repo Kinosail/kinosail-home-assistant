@@ -12,7 +12,9 @@ from aiohttp import ClientError, ClientSession
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
 MAX_PLAYERS = 64
 MAX_LIBRARY_ITEMS = 200
+MAX_LIBRARY_QUERY = 512
 ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
+COMMANDS = {"play", "pause", "stop", "seek", "volume", "mute", "play_media"}
 
 
 class KinosailError(Exception):
@@ -132,11 +134,32 @@ class KinosailClient:
     async def command(self, player_id: str, command: str, **values: Any) -> None:
         if not ID_PATTERN.fullmatch(player_id):
             raise KinosailError("Kinosail player ID is invalid")
+        valid = command in COMMANDS
+        if command in {"play", "pause", "stop"}:
+            valid = valid and not values
+        elif command == "seek":
+            valid = valid and _number_in_range(values, "position", 1e9)
+        elif command == "volume":
+            valid = valid and _number_in_range(values, "volume", 1)
+        elif command == "mute":
+            valid = valid and values.keys() == {"muted"} and isinstance(values["muted"], bool)
+        elif command == "play_media":
+            item_id = values.get("itemId")
+            valid = (
+                valid
+                and values.keys() == {"itemId"}
+                and isinstance(item_id, str)
+                and ID_PATTERN.fullmatch(item_id) is not None
+            )
+        if not valid:
+            raise KinosailError("Kinosail player command is invalid")
         await self.request(
             "POST", f"/api/v1/home-assistant/players/{player_id}/commands", json={"command": command, **values}
         )
 
     async def library(self, query: str = "") -> list[dict[str, Any]]:
+        if not isinstance(query, str) or len(query) > MAX_LIBRARY_QUERY:
+            raise KinosailError("Kinosail library query is invalid")
         params: dict[str, Any] = {"limit": 200}
         if query:
             params["q"] = query
@@ -161,3 +184,13 @@ class KinosailClient:
         if not isinstance(mime_type, str) or not mime_type:
             mime_type = "application/octet-stream"
         return urljoin(self.base_url + "/", path.lstrip("/")), mime_type
+
+
+def _number_in_range(values: dict[str, Any], name: str, maximum: float) -> bool:
+    value = values.get(name)
+    return (
+        values.keys() == {name}
+        and not isinstance(value, bool)
+        and isinstance(value, (int, float))
+        and 0 <= value <= maximum
+    )

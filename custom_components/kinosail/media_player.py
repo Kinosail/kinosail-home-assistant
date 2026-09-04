@@ -13,6 +13,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from .api import KinosailError
 from .const import DOMAIN, KinosailRuntime
 
 FEATURES = (
@@ -113,7 +114,10 @@ class KinosailPlayer(CoordinatorEntity, MediaPlayerEntity):
         return self.player.get("muted") if self.player else None
 
     async def _command(self, command: str, **values: Any) -> None:
-        await self.runtime.client.command(self.player_id, command, **values)
+        try:
+            await self.runtime.client.command(self.player_id, command, **values)
+        except KinosailError as err:
+            raise HomeAssistantError("Could not control the Kinosail player") from err
         await self.coordinator.async_request_refresh()
 
     async def async_media_play(self) -> None:

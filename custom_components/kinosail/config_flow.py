@@ -79,6 +79,15 @@ class KinosailConfigFlow(config_entry_oauth2_flow.AbstractOAuth2FlowHandler, dom
             }
         )
 
+    @staticmethod
+    def _reconfigure_schema(default_url: str, default_verify_ssl: bool) -> vol.Schema:
+        return vol.Schema(
+            {
+                vol.Required(CONF_URL, default=default_url): str,
+                vol.Required(CONF_VERIFY_SSL, default=default_verify_ssl): bool,
+            }
+        )
+
     async def _probe(self, base_url: str, verify_ssl: bool) -> tuple[str, str]:
         data = await KinosailClient(
             async_get_clientsession(self.hass), base_url, verify_ssl=verify_ssl
@@ -226,5 +235,31 @@ class KinosailConfigFlow(config_entry_oauth2_flow.AbstractOAuth2FlowHandler, dom
                 self._reauth_entry.data[CONF_URL],
                 self._reauth_entry.data.get(CONF_VERIFY_SSL, True),
             ),
+            errors=errors,
+        )
+
+    async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+        """Change the Server address without replacing its grant."""
+        entry = self._get_reconfigure_entry()
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            try:
+                base_url = normalize_url(user_input[CONF_URL])
+                verify_ssl = user_input[CONF_VERIFY_SSL]
+                server_id, name = await self._probe(base_url, verify_ssl)
+                if server_id != entry.unique_id:
+                    raise KinosailError("Connection belongs to another Kinosail Server")
+                return self.async_update_reload_and_abort(
+                    entry,
+                    title=name,
+                    data_updates={CONF_URL: base_url, CONF_VERIFY_SSL: verify_ssl},
+                )
+            except KinosailDisabledError:
+                errors["base"] = "disabled"
+            except (KinosailError, ValueError):
+                errors["base"] = "cannot_connect"
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=self._reconfigure_schema(entry.data[CONF_URL], entry.data.get(CONF_VERIFY_SSL, True)),
             errors=errors,
         )
