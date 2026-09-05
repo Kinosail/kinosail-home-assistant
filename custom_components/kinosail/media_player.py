@@ -3,17 +3,22 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Any
 
 from homeassistant.components import media_source
-from homeassistant.components.media_player import MediaPlayerEntity, MediaPlayerEntityFeature, MediaPlayerState
+from homeassistant.components.media_player import (
+    BrowseMedia,
+    MediaPlayerEntity,
+    MediaPlayerEntityFeature,
+    MediaPlayerState,
+    MediaType,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .api import KinosailError
+from .api import ID_PATTERN, JSONObject, JSONValue, KinosailError
 from .const import DOMAIN, KinosailRuntime
 
 FEATURES = (
@@ -35,11 +40,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 
     @callback
     def add_players() -> None:
-        players = [
-            player
-            for player in runtime.coordinator.data or []
-            if isinstance(player, dict) and isinstance(player.get("id"), str)
-        ]
+        players = [player for player in runtime.coordinator.data or [] if isinstance(player.get("id"), str)]
         new = [player for player in players if player["id"] not in known]
         if new:
             known.update(player["id"] for player in new)
@@ -68,8 +69,12 @@ class KinosailPlayer(CoordinatorEntity, MediaPlayerEntity):
         }
 
     @property
-    def player(self) -> dict[str, Any] | None:
+    def player(self) -> JSONObject | None:
         return next((value for value in self.coordinator.data or [] if value.get("id") == self.player_id), None)
+
+    def _value(self, key: str) -> JSONValue:
+        player = self.player
+        return player.get(key) if player else None
 
     @property
     def available(self) -> bool:
@@ -77,29 +82,34 @@ class KinosailPlayer(CoordinatorEntity, MediaPlayerEntity):
 
     @property
     def name(self) -> str | None:
-        return self.player.get("name") if self.player else None
+        value = self._value("name")
+        return value if isinstance(value, str) else None
 
     @property
     def state(self) -> MediaPlayerState | None:
-        value = self.player.get("state") if self.player else None
-        return {
+        value = self._value("state")
+        states = {
             "playing": MediaPlayerState.PLAYING,
             "paused": MediaPlayerState.PAUSED,
             "buffering": MediaPlayerState.BUFFERING,
             "idle": MediaPlayerState.IDLE,
-        }.get(value)
+        }
+        return states.get(value) if isinstance(value, str) else None
 
     @property
     def media_title(self) -> str | None:
-        return self.player.get("title") if self.player else None
+        value = self._value("title")
+        return value if isinstance(value, str) else None
 
     @property
     def media_position(self) -> float | None:
-        return self.player.get("position") if self.player else None
+        value = self._value("position")
+        return float(value) if isinstance(value, (int, float)) and not isinstance(value, bool) else None
 
     @property
     def media_duration(self) -> float | None:
-        return self.player.get("duration") if self.player else None
+        value = self._value("duration")
+        return float(value) if isinstance(value, (int, float)) and not isinstance(value, bool) else None
 
     @property
     def media_position_updated_at(self) -> datetime | None:
@@ -107,13 +117,15 @@ class KinosailPlayer(CoordinatorEntity, MediaPlayerEntity):
 
     @property
     def volume_level(self) -> float | None:
-        return self.player.get("volume") if self.player else None
+        value = self._value("volume")
+        return float(value) if isinstance(value, (int, float)) and not isinstance(value, bool) else None
 
     @property
     def is_volume_muted(self) -> bool | None:
-        return self.player.get("muted") if self.player else None
+        value = self._value("muted")
+        return value if isinstance(value, bool) else None
 
-    async def _command(self, command: str, **values: Any) -> None:
+    async def _command(self, command: str, **values: JSONValue) -> None:
         try:
             await self.runtime.client.command(self.player_id, command, **values)
         except KinosailError as err:
@@ -138,16 +150,25 @@ class KinosailPlayer(CoordinatorEntity, MediaPlayerEntity):
     async def async_mute_volume(self, mute: bool) -> None:
         await self._command("mute", muted=mute)
 
-    async def async_play_media(self, media_type: str, media_id: str, **kwargs: Any) -> None:
+    async def async_play_media(self, media_type: MediaType | str, media_id: str, **kwargs: object) -> None:
+        del media_type, kwargs
         prefix = f"media-source://{DOMAIN}/"
         if not media_source.is_media_source_id(media_id) or not media_id.startswith(prefix):
             raise HomeAssistantError("Choose Library Content from the Kinosail media browser")
-        entry_id, separator, item_id = media_id[len(prefix) :].partition("/")
-        if self.hass.data[DOMAIN].get(entry_id) is not self.runtime or not separator or not item_id:
+        parts = media_id[len(prefix) :].split("/")
+        if (
+            len(parts) != 2
+            or (entry_id := parts[0]) not in self.hass.data[DOMAIN]
+            or self.hass.data[DOMAIN][entry_id] is not self.runtime
+            or not ID_PATTERN.fullmatch(item_id := parts[1])
+        ):
             raise HomeAssistantError("Kinosail media item is invalid")
         await self._command("play_media", itemId=item_id)
 
-    async def async_browse_media(self, media_content_type: str | None = None, media_content_id: str | None = None):
+    async def async_browse_media(
+        self, media_content_type: MediaType | str | None = None, media_content_id: str | None = None
+    ) -> BrowseMedia:
+        del media_content_type
         entry_id = next(key for key, value in self.hass.data[DOMAIN].items() if value is self.runtime)
         return await media_source.async_browse_media(
             self.hass,

@@ -1,11 +1,23 @@
 [project]
 name = "kinosail-home-assistant"
 version = "0.2.0"
-requires-python = ">=3.13"
-dependencies = ["aiohttp>=3.12"]
+requires-python = ">=3.14.2"
+dependencies = ["aiohttp==3.14.3"]
 
 [project.optional-dependencies]
-test = ["pytest>=8", "pytest-asyncio>=1", "pytest-homeassistant-custom-component>=0.13.363", "ruff>=0.12"]
+test = [
+    "complexipy==8.0.0",
+    "mutmut==3.7.0",
+    "pre-commit==4.6.2",
+    "pylint==4.0.8",
+    "pytest==9.0.3",
+    "pytest-asyncio==1.4.0",
+    "pytest-cov==7.1.0",
+    "pytest-homeassistant-custom-component==0.13.363",
+    "radon==6.0.1",
+    "ruff==0.16.6",
+    "vulture==2.16",
+]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
@@ -14,7 +26,35 @@ testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 120
-target-version = "py313"
+target-version = "py314"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]
+
+[tool.coverage.run]
+branch = true
+source = ["custom_components/kinosail"]
+
+[tool.coverage.report]
+fail_under = 100
+show_missing = true
+
+[tool.mutmut]
+source_paths = ["custom_components/kinosail"]
+pytest_add_cli_args = ["-q"]
+pytest_add_cli_args_test_selection = ["tests"]
+mutate_only_covered_lines = true
+use_git_change_detection = false
+also_copy = [".github", ".python-version", "hacs.json"]
+cache_invalidation_files = [
+    ".github/workflows/validate.yml",
+    ".python-version",
+    "custom_components/kinosail/manifest.json",
+    "hacs.json",
+    "tests/**/*.py",
+]
+on_dependency_change = "rerun"
+do_not_mutate_patterns = [
+    "^\\s*raise ",
+    "cast\\(",
+]

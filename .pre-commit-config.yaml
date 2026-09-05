@@ -1,0 +1,9 @@
+repos:
+  - repo: local
+    hooks:
+      - id: quality-gate
+        name: Kinosail quality gate
+        entry: make check
+        language: system
+        pass_filenames: false
+        always_run: true

@@ -84,3 +84,16 @@ async def test_reconfigure_rejects_another_server_without_side_effects(hass) -> 
     assert result["errors"] == {"base": "cannot_connect"}
     assert entry.title == "Living Room"
     assert entry.data == original
+
+
+async def test_reconfigure_rejects_pairing_fields_before_network_access(hass) -> None:
+    entry = MockConfigEntry(domain=DOMAIN, unique_id="server", data={CONF_URL: "https://server", CONF_VERIFY_SSL: True})
+    entry.add_to_hass(hass)
+    with patch.object(KinosailClient, "probe", AsyncMock()) as probe:
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={"source": config_entries.SOURCE_RECONFIGURE, "entry_id": entry.entry_id},
+            data={CONF_URL: "https://server", CONF_VERIFY_SSL: True, "code": "12345678"},
+        )
+    assert result["errors"] == {"base": "cannot_connect"}
+    probe.assert_not_awaited()

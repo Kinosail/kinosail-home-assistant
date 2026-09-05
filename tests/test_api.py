@@ -2,58 +2,17 @@
 
 from __future__ import annotations
 
-import importlib.util
-import json
-from pathlib import Path
-
 import pytest
 
-spec = importlib.util.spec_from_file_location(
-    "kinosail_api", Path(__file__).parents[1] / "custom_components/kinosail/api.py"
+from custom_components.kinosail import api
+from custom_components.kinosail.api import (
+    KinosailAuthError,
+    KinosailClient,
+    KinosailDisabledError,
+    KinosailError,
+    normalize_url,
 )
-api = importlib.util.module_from_spec(spec)
-assert spec and spec.loader
-spec.loader.exec_module(api)
-KinosailAuthError, KinosailClient = api.KinosailAuthError, api.KinosailClient
-KinosailDisabledError, KinosailError, normalize_url = api.KinosailDisabledError, api.KinosailError, api.normalize_url
-
-
-class Response:
-    def __init__(self, status: int, body: dict) -> None:
-        self.status = status
-        self.body = body
-        self.content = self
-        self.raw = json.dumps(body).encode()
-        self.offset = 0
-
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, *_):
-        return None
-
-    def raise_for_status(self) -> None:
-        if self.status >= 400:
-            from aiohttp import ClientResponseError, RequestInfo
-            from multidict import CIMultiDict, CIMultiDictProxy
-
-            headers = CIMultiDictProxy(CIMultiDict())
-            raise ClientResponseError(RequestInfo("GET", None, headers, None), (), status=self.status)
-
-    async def read(self, limit: int) -> bytes:
-        chunk = self.raw[self.offset : self.offset + limit]
-        self.offset += len(chunk)
-        return chunk
-
-
-class Session:
-    def __init__(self, *responses: Response) -> None:
-        self.responses = list(responses)
-        self.calls = []
-
-    def request(self, method, url, **kwargs):
-        self.calls.append((method, url, kwargs))
-        return self.responses.pop(0)
+from tests.helpers import Response, Session
 
 
 @pytest.mark.parametrize(
@@ -71,9 +30,10 @@ class Session:
         "http://server:abc",
         "http://server:1.5",
         "x" * 2049,
+        None,
     ],
 )
-def test_normalize_url_rejects_ambiguous_values(value: str) -> None:
+def test_normalize_url_rejects_ambiguous_values(value: object) -> None:
     with pytest.raises(ValueError):
         normalize_url(value)
 
@@ -216,9 +176,9 @@ async def test_library_rejects_oversized_query_without_a_request() -> None:
     assert session.calls == []
 
 
-@pytest.mark.parametrize("code", ["", "1234567", "123456789", "abcdefgh", "１２３４５６７８"])
+@pytest.mark.parametrize("code", ["", "1234567", "123456789", "abcdefgh", "１２３４５６７８", None])
 @pytest.mark.asyncio
-async def test_pairing_rejects_invalid_codes_without_a_request(code: str) -> None:
+async def test_pairing_rejects_invalid_codes_without_a_request(code: object) -> None:
     session = Session()
     with pytest.raises(KinosailError, match="pairing"):
         await KinosailClient(session, "https://media.example").pair(code, "Home Assistant")

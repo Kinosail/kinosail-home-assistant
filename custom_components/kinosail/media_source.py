@@ -12,7 +12,7 @@ from homeassistant.components.media_source import (
 )
 from homeassistant.core import HomeAssistant
 
-from .api import KinosailError
+from .api import ID_PATTERN, JSONObject, KinosailError
 from .const import DOMAIN, KinosailRuntime
 
 
@@ -50,9 +50,9 @@ class KinosailMediaSource(MediaSource):
                 can_expand=True,
                 children=children,
             )
-        entry_id, separator, media_id = item.identifier.partition("/")
-        if media_id:
+        if "/" in item.identifier:
             raise BrowseError("This Kinosail item cannot be expanded")
+        entry_id = item.identifier
         runtime = self._runtime(entry_id)
         try:
             items = await runtime.client.library()
@@ -67,23 +67,25 @@ class KinosailMediaSource(MediaSource):
             can_play=False,
             can_expand=True,
             can_search=True,
-            children=[self._item(entry_id, value) for value in items if isinstance(value, dict)],
+            children=[self._item(entry_id, value) for value in items],
         )
 
     async def async_search_media(self, item: MediaSourceItem, query: SearchMediaQuery) -> SearchMedia:
         """Search one Kinosail Server."""
-        entry_id = (item.identifier or "").partition("/")[0]
+        entry_id = item.identifier or ""
+        if "/" in entry_id:
+            raise BrowseError("Kinosail search location is invalid")
         runtime = self._runtime(entry_id)
         try:
             items = await runtime.client.library(query.search_query)
         except KinosailError as err:
             raise BrowseError("Could not search Kinosail") from err
-        return SearchMedia(result=[self._item(entry_id, value) for value in items if isinstance(value, dict)])
+        return SearchMedia(result=[self._item(entry_id, value) for value in items])
 
     async def async_resolve_media(self, item: MediaSourceItem) -> PlayMedia:
         """Resolve a short-lived direct Kinosail stream."""
         entry_id, separator, media_id = item.identifier.partition("/")
-        if not separator or not media_id or len(media_id) > 128:
+        if not separator or not ID_PATTERN.fullmatch(media_id):
             raise Unresolvable("Kinosail item is invalid")
         try:
             url, mime_type = await self._runtime(entry_id).client.playback(media_id)
@@ -104,16 +106,18 @@ class KinosailMediaSource(MediaSource):
         )
 
     @staticmethod
-    def _item(entry_id: str, item: dict) -> BrowseMediaSource:
+    def _item(entry_id: str, item: JSONObject) -> BrowseMediaSource:
         kind = item.get("kind")
-        media_class = MediaClass.MUSIC if kind in {"audio", "audiobook"} else MediaClass.VIDEO
-        media_type = MediaType.MUSIC if kind in {"audio", "audiobook"} else MediaType.VIDEO
+        title = item.get("title")
+        is_audio = isinstance(kind, str) and kind in {"audio", "audiobook"}
+        media_class = MediaClass.MUSIC if is_audio else MediaClass.VIDEO
+        media_type = MediaType.MUSIC if is_audio else MediaType.VIDEO
         return BrowseMediaSource(
             domain=DOMAIN,
-            identifier=f"{entry_id}/{item.get('id', '')}",
+            identifier=f"{entry_id}/{item['id']}",
             media_class=media_class,
             media_content_type=media_type,
-            title=str(item.get("title") or "Untitled"),
+            title=title if isinstance(title, str) and title else "Untitled",
             can_play=True,
             can_expand=False,
         )
