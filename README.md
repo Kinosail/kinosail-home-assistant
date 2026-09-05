@@ -1,3 +1,5 @@
+<p align="center"><img src="custom_components/kinosail/brand/icon.svg" width="112" height="112" alt="Kinosail for Home Assistant logo"></p>
+
 # Kinosail for Home Assistant
 
 This custom integration connects Home Assistant directly to a local [Kinosail](https://github.com/MikeO7/kinosail-player) Server.
