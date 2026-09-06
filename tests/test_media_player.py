@@ -1,5 +1,6 @@
 """Tests for Kinosail player state and setup."""
 
+from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
@@ -14,6 +15,7 @@ def runtime(players: list[dict[str, object]], *, available: bool = True) -> Simp
     """Build the minimum coordinator runtime used by an entity."""
     coordinator = SimpleNamespace(
         data=players,
+        updated_at=datetime.now(UTC),
         last_update_success=available,
         async_add_listener=Mock(return_value=Mock()),
         async_request_refresh=AsyncMock(),

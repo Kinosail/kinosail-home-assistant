@@ -1,7 +1,7 @@
 """Kinosail player polling."""
 
 import logging
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 
 from homeassistant.config_entries import ConfigEntryAuthFailed
 from homeassistant.core import HomeAssistant
@@ -19,10 +19,13 @@ class KinosailCoordinator(DataUpdateCoordinator[list[JSONObject]]):
     def __init__(self, hass: HomeAssistant, client: KinosailClient) -> None:
         super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=timedelta(seconds=5))
         self.client = client
+        self.updated_at: datetime | None = None
 
     async def _async_update_data(self) -> list[JSONObject]:
         try:
-            return await self.client.players()
+            players = await self.client.players()
+            self.updated_at = datetime.now(UTC)
+            return players
         except KinosailAuthError as err:
             raise ConfigEntryAuthFailed from err
         except KinosailError as err:

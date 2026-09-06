@@ -231,7 +231,7 @@ async def test_finish_accepts_exact_authorization_boundaries(hass, token: str, n
     ):
         assert await instance._finish({"serverId": "x" * 128, "name": name, "token": token}) is expected
     set_id.assert_awaited_once_with("x" * 128)
-    abort_existing.assert_called_once_with(updates={CONF_URL: "https://server", CONF_VERIFY_SSL: False})
+    abort_existing.assert_called_once_with()
     create.assert_called_once_with(
         title=name, data={CONF_URL: "https://server", CONF_VERIFY_SSL: False, "token": token}
     )

@@ -7,7 +7,7 @@ import re
 from typing import cast
 from urllib.parse import urlsplit, urlunsplit
 
-from aiohttp import ClientError, ClientSession
+from aiohttp import ClientError, ClientSession, ClientTimeout
 
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
 MAX_PLAYERS = 64
@@ -45,14 +45,21 @@ def validate_pairing_code(value: object) -> str:
     return value
 
 
+def valid_token(value: object) -> bool:
+    """Accept only bounded bearer tokens safe for an Authorization header."""
+    return (
+        isinstance(value, str) and 1 <= len(value) <= 4096 and re.fullmatch(r"[A-Za-z0-9._~+/-]+=*", value) is not None
+    )
+
+
 def normalize_url(value: object) -> str:
     """Validate and normalize one local Kinosail URL."""
-    if not isinstance(value, str) or len(value) > 2048:
+    if not isinstance(value, str) or len(value) > 2048 or re.search(r"[\000-\040\177\\]", value.strip()):
         raise ValueError("invalid URL")
     parsed = urlsplit(value.strip())
     if parsed.scheme not in URL_SCHEMES or not parsed.hostname:
         raise ValueError("invalid URL")
-    if parsed.username or parsed.password or parsed.query or parsed.fragment:
+    if parsed.username is not None or parsed.password is not None or parsed.query or parsed.fragment:
         raise ValueError("invalid URL")
     if parsed.path not in {"", "/"}:
         raise ValueError("invalid URL")
@@ -99,11 +106,15 @@ class KinosailClient:
                 params=params,
                 headers=headers,
                 ssl=self.verify_ssl,
+                timeout=ClientTimeout(total=10),
+                allow_redirects=False,
             ) as response:
                 if response.status in {401, 403}:
                     raise KinosailAuthError("Kinosail authorization failed")
                 if response.status == 404 and path.startswith("/api/v1/home-assistant"):
                     raise KinosailDisabledError("Home Assistant is disabled in Kinosail")
+                if 300 <= response.status < 400:
+                    raise KinosailError("Kinosail API redirects are not allowed")
                 response.raise_for_status()
                 chunks: list[bytes] = []
                 size = 0
@@ -112,8 +123,8 @@ class KinosailClient:
                     size += len(chunk)
                     if size > MAX_RESPONSE_BYTES:
                         raise KinosailError("Kinosail response is too large")
-                payload = cast(JSONValue, json_module.loads(b"".join(chunks)))
-        except (ClientError, UnicodeDecodeError, ValueError) as err:
+                payload = cast(JSONValue, json_module.loads(b"".join(chunks), object_pairs_hook=_json_object))
+        except (ClientError, TimeoutError, UnicodeDecodeError, ValueError, RecursionError) as err:
             raise KinosailError("Could not connect to Kinosail") from err
         if not isinstance(payload, dict):
             raise KinosailError("Kinosail returned an invalid response")
@@ -149,6 +160,13 @@ class KinosailClient:
                 or not ID_PATTERN.fullmatch(player["id"])
                 for player in players
             )
+        ):
+            raise KinosailError("Kinosail returned invalid players")
+        if len({player["id"] for player in players}) != len(players) or any(
+            not _number_in_range({key: player[key]}, key, maximum)
+            for player in players
+            for key, maximum in (("position", 1e9), ("duration", 1e9), ("volume", 1))
+            if key in player
         ):
             raise KinosailError("Kinosail returned invalid players")
         return cast(list[JSONObject], players)
@@ -203,7 +221,9 @@ class KinosailClient:
             raise KinosailError("Kinosail item ID is invalid")
         data = await self.request("POST", f"/api/v1/home-assistant/playback/{item_id}", json={})
         path = data.get("url")
-        if not isinstance(path, str) or not path.startswith("/home-assistant/media/"):
+        if not isinstance(path, str) or not re.fullmatch(
+            rf"/home-assistant/media/{re.escape(item_id)}(?:\?[^\s#\\]*)?", path
+        ):
             raise KinosailError("Kinosail returned an invalid playback URL")
         mime_type = data.get("mimeType")
         if not isinstance(mime_type, str) or not mime_type:
@@ -219,3 +239,11 @@ def _number_in_range(values: JSONObject, name: str, maximum: float) -> bool:
         and isinstance(value, (int, float))
         and 0 <= value <= maximum
     )
+
+
+def _json_object(pairs: list[tuple[str, JSONValue]]) -> JSONObject:
+    """Reject ambiguous duplicate fields in remote JSON objects."""
+    result = dict(pairs)
+    if len(result) != len(pairs):
+        raise ValueError("duplicate JSON field")
+    return result

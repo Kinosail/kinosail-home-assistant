@@ -84,6 +84,8 @@ class KinosailMediaSource(MediaSource):
 
     async def async_resolve_media(self, item: MediaSourceItem) -> PlayMedia:
         """Resolve a short-lived direct Kinosail stream."""
+        if item.identifier is None:
+            raise Unresolvable("Kinosail item is invalid")
         entry_id, separator, media_id = item.identifier.partition("/")
         if not separator or not ID_PATTERN.fullmatch(media_id):
             raise Unresolvable("Kinosail item is invalid")

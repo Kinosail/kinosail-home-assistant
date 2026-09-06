@@ -5,7 +5,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .api import KinosailClient, normalize_url
+from .api import KinosailClient, normalize_url, valid_token
 from .const import DOMAIN, PLATFORMS, KinosailRuntime
 from .coordinator import KinosailCoordinator
 
@@ -15,12 +15,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     url = entry.data.get("url")
     token = entry.data.get("token")
     verify_ssl = entry.data.get("verify_ssl", True)
-    if (
-        not isinstance(url, str)
-        or not isinstance(token, str)
-        or not 1 <= len(token) <= 4096
-        or not isinstance(verify_ssl, bool)
-    ):
+    if not isinstance(url, str) or not valid_token(token) or not isinstance(verify_ssl, bool):
         raise ConfigEntryError("Kinosail configuration is invalid")
     try:
         url = normalize_url(url)

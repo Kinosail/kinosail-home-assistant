@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime
 
 from homeassistant.components import media_source
 from homeassistant.components.media_player import (
@@ -113,7 +113,7 @@ class KinosailPlayer(CoordinatorEntity, MediaPlayerEntity):
 
     @property
     def media_position_updated_at(self) -> datetime | None:
-        return datetime.now(UTC) if self.player else None
+        return self.coordinator.updated_at if self.player else None
 
     @property
     def volume_level(self) -> float | None:

@@ -24,6 +24,7 @@ from .api import (
     KinosailDisabledError,
     KinosailError,
     normalize_url,
+    valid_token,
 )
 from .const import DOMAIN
 from .validation import CONF_CODE, FlowInput, advertised_bool, connection_input, transport_input
@@ -125,8 +126,7 @@ class KinosailConfigFlow(config_entry_oauth2_flow.AbstractOAuth2FlowHandler, dom
         if (
             not isinstance(server_id, str)
             or not ID_PATTERN.fullmatch(server_id)
-            or not isinstance(token, str)
-            or not 1 <= len(token) <= 4096
+            or not valid_token(token)
             or not isinstance(name, str)
             or not 1 <= len(name) <= 256
         ):
@@ -139,8 +139,10 @@ class KinosailConfigFlow(config_entry_oauth2_flow.AbstractOAuth2FlowHandler, dom
                 title=name,
                 data={CONF_URL: self._base_url, CONF_VERIFY_SSL: self._verify_ssl, "token": token},
             )
+        if self.unique_id is not None and server_id != self.unique_id:
+            raise KinosailError("Authorization belongs to another Kinosail Server")
         await self.async_set_unique_id(server_id)
-        self._abort_if_unique_id_configured(updates={CONF_URL: self._base_url, CONF_VERIFY_SSL: self._verify_ssl})
+        self._abort_if_unique_id_configured()
         return self.async_create_entry(
             title=name,
             data={CONF_URL: self._base_url, CONF_VERIFY_SSL: self._verify_ssl, "token": token},
@@ -153,9 +155,7 @@ class KinosailConfigFlow(config_entry_oauth2_flow.AbstractOAuth2FlowHandler, dom
                 self._base_url, self._verify_ssl, code = connection_input(user_input)
                 server_id, _ = await self._probe(self._base_url, self._verify_ssl)
                 await self.async_set_unique_id(server_id)
-                self._abort_if_unique_id_configured(
-                    updates={CONF_URL: self._base_url, CONF_VERIFY_SSL: self._verify_ssl}
-                )
+                self._abort_if_unique_id_configured()
                 if code:
                     return await self._manual_pair(code)
                 return await self._start_oauth()
@@ -172,8 +172,8 @@ class KinosailConfigFlow(config_entry_oauth2_flow.AbstractOAuth2FlowHandler, dom
             if (
                 not isinstance(server_id, str)
                 or not ID_PATTERN.fullmatch(server_id)
-                or discovery_info.port is None
-                or discovery_info.port < 1
+                or type(discovery_info.port) is not int
+                or not 1 <= discovery_info.port <= 65535
             ):
                 raise ValueError("invalid discovery")
             verify_ssl = advertised_bool(discovery_info.properties.get("verify_ssl"), True)
@@ -190,7 +190,7 @@ class KinosailConfigFlow(config_entry_oauth2_flow.AbstractOAuth2FlowHandler, dom
             return self.async_abort(reason="invalid_discovery")
         self._verify_ssl = verify_ssl
         await self.async_set_unique_id(server_id)
-        self._abort_if_unique_id_configured(updates={CONF_URL: self._base_url, CONF_VERIFY_SSL: self._verify_ssl})
+        self._abort_if_unique_id_configured()
         return await self.async_step_confirm()
 
     async def async_step_confirm(self, user_input: FlowInput | None = None) -> FlowResult:

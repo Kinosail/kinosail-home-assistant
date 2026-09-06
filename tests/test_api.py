@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from aiohttp import ClientTimeout
 
 from custom_components.kinosail import api
 from custom_components.kinosail.api import (
@@ -83,7 +84,15 @@ async def test_oauth_token_exchange_uses_form_data_without_authentication() -> N
         (
             "POST",
             "https://media.example/api/v1/home-assistant/token",
-            {"json": None, "data": form, "params": None, "headers": {}, "ssl": True},
+            {
+                "json": None,
+                "data": form,
+                "params": None,
+                "headers": {},
+                "ssl": True,
+                "timeout": ClientTimeout(total=10),
+                "allow_redirects": False,
+            },
         )
     ]
 

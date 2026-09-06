@@ -26,6 +26,8 @@ Home Assistant also offers enabled Kinosail Servers that it discovers through lo
 
 Discovery verifies a trusted Kinosail certificate. It uses the confirmed local connection without certificate validation for Kinosail's private certificate. Manual setup keeps this choice visible.
 
+Existing connections keep their approved address and certificate setting when discovery runs again. If the Server moves, use **Reconfigure** on the Kinosail integration to update the connection.
+
 Disabling Home Assistant in Kinosail withdraws mDNS discovery and the API. It also revokes every Home Assistant token.
 
 ## Manual install

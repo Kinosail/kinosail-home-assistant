@@ -45,7 +45,7 @@ pytest_add_cli_args = ["-q"]
 pytest_add_cli_args_test_selection = ["tests"]
 mutate_only_covered_lines = true
 use_git_change_detection = false
-also_copy = [".github", ".python-version", "hacs.json"]
+also_copy = [".github", ".python-version", "hacs.json", "scripts"]
 cache_invalidation_files = [
     ".github/workflows/validate.yml",
     ".python-version",

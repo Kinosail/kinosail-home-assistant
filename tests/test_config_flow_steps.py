@@ -68,7 +68,7 @@ async def test_user_without_pairing_code_starts_oauth(hass) -> None:
         assert await instance.async_step_user({CONF_URL: "https://server", CONF_VERIFY_SSL: True}) is expected
     probe.assert_awaited_once_with("https://server", True)
     set_id.assert_awaited_once_with("server")
-    abort_existing.assert_called_once_with(updates={CONF_URL: "https://server", CONF_VERIFY_SSL: True})
+    abort_existing.assert_called_once_with()
 
 
 async def test_user_with_pairing_code_passes_exact_code(hass) -> None:
@@ -130,7 +130,7 @@ async def test_zeroconf_normalizes_valid_advertisements(
         assert await instance.async_step_zeroconf(info) is expected
     assert (instance._base_url, instance._verify_ssl) == (url, verify_ssl)
     set_id.assert_awaited_once_with("server")
-    abort_existing.assert_called_once_with(updates={CONF_URL: url, CONF_VERIFY_SSL: verify_ssl})
+    abort_existing.assert_called_once_with()
 
 
 async def test_zeroconf_uses_explicit_boolean_defaults(hass) -> None:

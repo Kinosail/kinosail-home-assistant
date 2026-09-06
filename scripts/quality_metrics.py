@@ -20,6 +20,10 @@ def functions(source: str):
         if block.__class__.__name__ == "Function":
             yield block
             yield from block.closures
+        elif block.__class__.__name__ == "Class":
+            for method in block.methods:
+                yield method
+                yield from method.closures
 
 
 def dynamic_type_lines(tree: ast.AST) -> list[int]:
