@@ -16,6 +16,7 @@ quality:
 	$(TOOL_BIN)pylint --disable=all --enable=duplicate-code --min-similarity-lines=4 custom_components/kinosail
 
 mutation-test:
+	$(PYTHON) -c "import shutil; from pathlib import Path; path = Path('mutants'); path.exists() and shutil.rmtree(path)"
 	$(TOOL_BIN)mutmut run --max-children 4
 	$(TOOL_BIN)mutmut export-cicd-stats
 	$(PYTHON) scripts/check_mutation.py mutants/mutmut-cicd-stats.json
