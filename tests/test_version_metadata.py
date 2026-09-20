@@ -27,7 +27,7 @@ def test_dependency_versions_match_the_supported_home_assistant_environment() ->
     assert project["dependencies"] == ["aiohttp==3.14.3"]
     assert project["optional-dependencies"]["test"] == [
         "complexipy==8.0.1",
-        "mutmut==3.8.0",
+        "mutmut==3.7.0",
         "pre-commit==4.6.2",
         "pylint==4.0.8",
         "pytest==9.0.3",
