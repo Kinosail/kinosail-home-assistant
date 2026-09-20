@@ -43,7 +43,9 @@ show_missing = true
 source_paths = ["custom_components/kinosail"]
 pytest_add_cli_args = ["-q"]
 pytest_add_cli_args_test_selection = ["tests"]
-mutate_only_covered_lines = true
+# Coverage is enforced separately. Reloading C-extension modules during the
+# coverage prepass breaks dbus-fast enum identity on Linux. Mutate every line.
+mutate_only_covered_lines = false
 use_git_change_detection = false
 also_copy = [".github", ".python-version", "hacs.json", "scripts"]
 cache_invalidation_files = [
