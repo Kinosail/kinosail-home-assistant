@@ -2,8 +2,8 @@ repos:
   - repo: local
     hooks:
       - id: quality-gate
-        name: Kinosail quality gate
-        entry: make check
+        name: Kinosail local lint (full checks run in GitHub Actions)
+        entry: make lint
         language: system
         pass_filenames: false
         always_run: true

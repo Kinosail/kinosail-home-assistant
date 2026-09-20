@@ -1,0 +1,46 @@
+name: Release
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: read
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate release version and required checks
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [[ "$GITHUB_REF_NAME" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          [[ "${GITHUB_REF_NAME#v}" == "$(jq -r .version custom_components/kinosail/manifest.json)" ]]
+          commit="$(git rev-parse "$GITHUB_SHA^{commit}")"
+          git merge-base --is-ancestor "$commit" origin/main
+          for workflow in validate.yml security.yml; do
+            conclusion="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow "$workflow" --commit "$commit" --event push --limit 1 --json conclusion --jq '.[0].conclusion')"
+            [[ "$conclusion" == success ]]
+          done
+      - name: Package integration for HACS
+        working-directory: custom_components/kinosail
+        run: zip -r ../../kinosail.zip . -x '*__pycache__*' '*.pyc'
+      - run: sha256sum kinosail.zip > kinosail.zip.sha256
+      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
+        with:
+          subject-path: kinosail.zip
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: gh release create "$RELEASE_TAG" --verify-tag --generate-notes kinosail.zip kinosail.zip.sha256

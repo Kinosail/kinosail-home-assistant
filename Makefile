@@ -1,13 +1,15 @@
 PYTHON ?= $(shell if [ -x .venv/bin/python ]; then printf '%s/.venv/bin/python\n' "$$(pwd)"; elif command -v python3 >/dev/null 2>&1; then command -v python3; else command -v python; fi)
 TOOL_BIN := $(dir $(PYTHON))
 
-.PHONY: check quality mutation-test
+.PHONY: check lint quality mutation-test
 
 check: quality mutation-test
 
-quality:
+lint:
 	$(TOOL_BIN)ruff format --check custom_components tests scripts
 	$(TOOL_BIN)ruff check custom_components tests scripts
+
+quality: lint
 	mkdir -p .verification
 	$(TOOL_BIN)pytest -q --cov --cov-branch --cov-report=term-missing --cov-report=json:.verification/coverage.json
 	$(PYTHON) scripts/quality_metrics.py .verification/coverage.json

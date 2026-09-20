@@ -2,7 +2,7 @@
 
 # Kinosail for Home Assistant
 
-This custom integration connects Home Assistant directly to a local [Kinosail](https://github.com/MikeO7/kinosail-player) Server.
+This custom integration connects Home Assistant directly to a local [Kinosail](https://github.com/Kinosail/kinosail) Server.
 
 It provides:
 
@@ -16,7 +16,7 @@ It provides:
 ## Install with HACS
 
 1. Open HACS in Home Assistant.
-2. Add `https://github.com/MikeO7/kinosail-home-assistant` as a custom integration repository.
+2. Add `https://github.com/Kinosail/kinosail-home-assistant` as a custom integration repository.
 3. Install Kinosail and restart Home Assistant.
 4. In Kinosail, open **Settings → Access → Integrations**.
 5. Enable **Home Assistant**, then select **Add to Home Assistant**.
