@@ -30,7 +30,13 @@ jobs:
       - name: Audit Python dependencies
         run: |
           python -m pip install pip-audit==2.10.0
-          pip-audit
+          python - <<'PY' | pip-audit -r /dev/stdin
+          import tomllib
+
+          with open("pyproject.toml", "rb") as project_file:
+              for dependency in tomllib.load(project_file)["project"]["dependencies"]:
+                  print(dependency)
+          PY
 
   mutation:
     runs-on: ubuntu-latest
