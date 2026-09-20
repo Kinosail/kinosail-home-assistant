@@ -65,10 +65,26 @@ jobs:
         if: github.event_name == 'pull_request'
         uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294
 
+  findings:
+    name: CodeQL findings policy
+    needs: codeql
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: read
+    steps:
+      - name: Reject high and critical code scanning alerts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api --method GET --paginate --slurp "repos/$GITHUB_REPOSITORY/code-scanning/alerts" \
+            -f state=open -f ref="$GITHUB_REF" -f tool_name=CodeQL -f per_page=100 > alerts.json
+          jq -e '[.[][] | select(.rule.security_severity_level == "high" or .rule.security_severity_level == "critical")] | length == 0' alerts.json
+
   required:
     name: Security checks
     if: always()
-    needs: [codeql, supply-chain]
+    needs: [codeql, supply-chain, findings]
     runs-on: ubuntu-latest
     steps:
       - env:
