@@ -46,4 +46,4 @@ def test_automation_refs_are_audited_and_immutable() -> None:
     assert workflow.count("actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1") == 3
     assert "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0" in workflow
     assert "hacs/action@1ebf01c408f29afcb6406bd431bc98fd8cbb15aa # main" in workflow
-    assert "home-assistant/actions/hassfest@a7c616ce81ccda50150bf1595786c71b1883fabb # master" in workflow
+    assert "home-assistant/actions/hassfest@58bff37c8947f690ace498be413a9b78d6f30f93 # master" in workflow
