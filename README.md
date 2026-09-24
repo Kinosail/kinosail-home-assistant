@@ -2,7 +2,7 @@
 
 # Kinosail for Home Assistant
 
-This custom integration connects Home Assistant directly to a local [Kinosail](https://github.com/Kinosail/kinosail) Server.
+This custom integration connects Home Assistant directly to a local [Kinosail Player Server](https://kinosail.com/). [View the Server source](https://github.com/Kinosail/kinosail).
 
 It provides:
 
