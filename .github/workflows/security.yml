@@ -30,12 +30,12 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
-      - uses: github/codeql-action/init@1c5b675653bb5c22dbe9b12b556ec555138e09fd
+      - uses: github/codeql-action/init@1bd86f2fdb4b86187fa4059f16f31a3202acc9ea
         with:
           languages: ${{ matrix.language }}
           build-mode: none
           queries: security-extended
-      - uses: github/codeql-action/analyze@1c5b675653bb5c22dbe9b12b556ec555138e09fd
+      - uses: github/codeql-action/analyze@1bd86f2fdb4b86187fa4059f16f31a3202acc9ea
 
   supply-chain:
     name: Supply chain security
@@ -45,7 +45,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5
         with:
           go-version: "1.27"
           cache: false
@@ -63,7 +63,7 @@ jobs:
           ignore-unfixed: true
       - name: Review dependency changes
         if: github.event_name == 'pull_request'
-        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294
+        uses: actions/dependency-review-action@bbc44d14a204704ccc493733616cd1e93a0321ec
 
   findings:
     name: CodeQL findings policy
